@@ -1,0 +1,497 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api": {
+      "get": {
+        "description": "Endpoint sederhana untuk memastikan server berjalan.",
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Server berjalan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "Hello World!"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cek status API",
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "description": "Membuat akun Supabase baru (email langsung terkonfirmasi). Hanya menerima email @student.telkomuniversity.ac.id.",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registrasi berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi body gagal atau ditolak oleh Supabase",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Validasi body gagal",
+                    "value": {
+                      "message": [
+                        "Email harus menggunakan domain @student.telkomuniversity.ac.id",
+                        "Password minimal 6 karakter"
+                      ],
+                      "error": "Bad Request",
+                      "statusCode": 400
+                    }
+                  },
+                  "emailExists": {
+                    "summary": "Email sudah terdaftar (pesan dari Supabase)",
+                    "value": {
+                      "message": "A user with this email address has already been registered",
+                      "error": "Bad Request",
+                      "statusCode": 400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Registrasi akun baru",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "description": "Login dengan email & password. Gunakan `data.access_token` pada tombol Authorize untuk endpoint yang butuh autentikasi. Catatan: status HTTP yang dikirim 201 (default @Post), sedangkan field `statusCode` di body bernilai 200.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Login berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi body gagal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Validasi body gagal",
+                    "value": {
+                      "message": [
+                        "email must be an email",
+                        "password should not be empty"
+                      ],
+                      "error": "Bad Request",
+                      "statusCode": 400
+                    }
+                  },
+                  "emailDomain": {
+                    "summary": "Domain email tidak valid",
+                    "value": {
+                      "message": "Email harus menggunakan domain @student.telkomuniversity.ac.id",
+                      "error": "Bad Request",
+                      "statusCode": 400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Email atau password salah",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "message": "Invalid login credentials",
+                  "error": "Unauthorized",
+                  "statusCode": 401
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "description": "Mengambil data user berdasarkan access token Supabase di header Authorization.",
+        "operationId": "AuthController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Data user berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "message": "Access token tidak ditemukan",
+                      "error": "Unauthorized",
+                      "statusCode": 401
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "message": "Access token tidak valid",
+                      "error": "Unauthorized",
+                      "statusCode": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Data user yang sedang login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Telu Knowledge API",
+    "description": "REST API untuk platform Telu Knowledge. Autentikasi menggunakan access token Supabase (Bearer JWT) yang didapat dari endpoint login.",
+    "version": "0.0.1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Masukkan access_token dari POST /api/auth/login"
+      }
+    },
+    "schemas": {
+      "ApiErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "Pesan error"
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "mahasiswa@student.telkomuniversity.ac.id",
+            "description": "Harus berdomain @student.telkomuniversity.ac.id",
+            "pattern": "@student\\.telkomuniversity\\.ac\\.id$"
+          },
+          "password": {
+            "type": "string",
+            "example": "rahasia123",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "0b6f1c2e-6a3d-4f7b-9a51-2f1e8c7d9a10"
+          },
+          "email": {
+            "type": "string",
+            "example": "mahasiswa@student.telkomuniversity.ac.id"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-10-31T12:00:00.000000Z"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "created_at"
+        ]
+      },
+      "AuthUserDataDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "RegisterResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 201
+          },
+          "message": {
+            "type": "string",
+            "example": "Registrasi berhasil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/AuthUserDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "mahasiswa@student.telkomuniversity.ac.id",
+            "description": "Harus berdomain @student.telkomuniversity.ac.id"
+          },
+          "password": {
+            "type": "string",
+            "example": "rahasia123"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginDataDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          },
+          "access_token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refresh_token": {
+            "type": "string",
+            "example": "v1.MRjVxkF8sZ2..."
+          },
+          "expires_in": {
+            "type": "number",
+            "example": 3600,
+            "description": "Masa berlaku token (detik)"
+          }
+        },
+        "required": [
+          "user",
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Login berhasil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/LoginDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "MeResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Data user berhasil diambil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/AuthUserDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      }
+    }
+  }
+}

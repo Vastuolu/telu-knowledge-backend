@@ -44,6 +44,60 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Dokumentasi API (Swagger / OpenAPI)
+
+Dokumentasi dibuat dengan [`@nestjs/swagger`](https://docs.nestjs.com/openapi/introduction). Konfigurasinya ada di `src/common/swagger/swagger.setup.ts`.
+
+### Cara akses
+
+Jalankan server (`npm run start:dev`), lalu buka:
+
+| URL | Isi |
+|---|---|
+| `http://localhost:<PORT>/api-docs` | Swagger UI |
+| `http://localhost:<PORT>/api-docs-json` | Spesifikasi OpenAPI (JSON) |
+
+Untuk mencoba endpoint yang butuh login (ikon gembok):
+
+1. Panggil `POST /api/auth/login` lewat **Try it out**.
+2. Salin `data.access_token` dari response.
+3. Klik **Authorize**, tempel token (tanpa prefix `Bearer`), lalu **Authorize**.
+
+### Environment variable
+
+| Variabel | Default | Keterangan |
+|---|---|---|
+| `ENABLE_SWAGGER` | kosong | `true`/`false` memaksa Swagger UI nyala/mati. Jika kosong, aktif kecuali `NODE_ENV=production`. |
+| `API_BASE_URL` | kosong | Server URL di spesifikasi, **tanpa** `/api` (contoh `https://api.example.com`). Jika kosong, Swagger UI memakai origin halaman. |
+
+### Export spesifikasi ke file
+
+```bash
+$ npm run openapi:export
+```
+
+Menghasilkan `openapi.json` di root proyek (berguna untuk generate client atau import ke Postman). Script ini butuh `.env` yang sama seperti saat menjalankan server.
+
+### Menambah dokumentasi untuk endpoint baru
+
+1. **DTO request** – tambahkan `@ApiProperty()` / `@ApiPropertyOptional()` di setiap properti DTO yang sudah memakai `class-validator`. Jangan buat schema terpisah untuk body.
+   ```ts
+   @ApiProperty({ example: 'Judul materi' })
+   @IsString()
+   title: string;
+   ```
+2. **DTO response** – buat class di `src/<modul>/dto/<modul>-response.dto.ts` yang meng-extend `ApiSuccessResponseDto` (envelope `ResponseHelper`) dan tambahkan field `data`.
+3. **Controller**
+   - `@ApiTags('<Modul>')` di level class.
+   - `@ApiOperation({ summary, description })` di setiap handler.
+   - Response sukses: `@ApiOkResponse` / `@ApiCreatedResponse` dengan `type: <ResponseDto>`.
+   - Response error: `@ApiBadRequestResponse`, `@ApiUnauthorizedResponse`, dll. dengan `type: ApiErrorResponseDto` dan `example`/`examples` sesuai pesan error yang benar-benar dilempar.
+   - Endpoint dengan `@UseGuards(SupabaseAuthGuard)` **wajib** diberi `@ApiBearerAuth(BEARER_AUTH_NAME)`.
+   - Param/query: `@ApiParam` / `@ApiQuery` (atau DTO query dengan `@ApiProperty`).
+4. Cek hasilnya di `/api-docs`. Contoh lengkap ada di `src/auth/auth.controller.ts`.
+
+> Catatan: endpoint `@Post` di NestJS mengembalikan HTTP 201 secara default. Dokumentasikan status yang benar-benar dikirim.
+
 ## Run tests
 
 ```bash
