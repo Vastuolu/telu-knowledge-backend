@@ -1,5 +1,5 @@
 export class ResponseHelper {
-  static success(statusCode: number, message: string, data?: any) {
+  static success<T = any>(statusCode: number, message: string, data?: T) {
     return {
       statusCode,
       message,
@@ -8,7 +8,11 @@ export class ResponseHelper {
     };
   }
 
-  static error(statusCode: number, message: string, data?: any) {
+  static error<T = any>(
+    statusCode: number,
+    message: string | string[],
+    data?: T,
+  ) {
     return {
       statusCode,
       message,
