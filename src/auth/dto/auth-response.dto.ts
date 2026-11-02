@@ -34,11 +34,25 @@ export class RegisterResponseDto extends ApiSuccessResponseDto {
   @ApiProperty({ example: 201 })
   declare statusCode: number;
 
-  @ApiProperty({ example: 'Registrasi berhasil' })
+  @ApiProperty({
+    example:
+      'Registrasi berhasil. Silakan periksa email Anda untuk verifikasi akun.',
+  })
   declare message: string;
 
   @ApiProperty({ type: AuthUserDataDto })
   data: AuthUserDataDto;
+}
+
+export class ResendVerificationResponseDto extends ApiSuccessResponseDto {
+  @ApiProperty({
+    example:
+      'Jika email terdaftar, tautan verifikasi telah dikirim ulang. Silakan periksa inbox atau spam email Anda.',
+  })
+  declare message: string;
+
+  @ApiProperty({ type: () => Object, nullable: true, example: null })
+  data: Record<string, never> | null;
 }
 
 export class LoginResponseDto extends ApiSuccessResponseDto {
@@ -47,6 +61,41 @@ export class LoginResponseDto extends ApiSuccessResponseDto {
 
   @ApiProperty({ type: LoginDataDto })
   data: LoginDataDto;
+}
+
+export class RefreshResponseDto extends ApiSuccessResponseDto {
+  @ApiProperty({ example: 'Token berhasil diperbarui' })
+  declare message: string;
+
+  @ApiProperty({ type: LoginDataDto })
+  data: LoginDataDto;
+}
+
+export class LogoutResponseDto extends ApiSuccessResponseDto {
+  @ApiProperty({ example: 'Logout berhasil' })
+  declare message: string;
+
+  @ApiProperty({ type: () => Object, nullable: true, example: null })
+  data: Record<string, never> | null;
+}
+
+export class ForgotPasswordResponseDto extends ApiSuccessResponseDto {
+  @ApiProperty({
+    example:
+      'Jika email terdaftar, tautan reset password telah dikirim ke email Anda.',
+  })
+  declare message: string;
+
+  @ApiProperty({ type: () => Object, nullable: true, example: null })
+  data: Record<string, never> | null;
+}
+
+export class ResetPasswordResponseDto extends ApiSuccessResponseDto {
+  @ApiProperty({ example: 'Password berhasil diubah' })
+  declare message: string;
+
+  @ApiProperty({ type: () => Object, nullable: true, example: null })
+  data: Record<string, never> | null;
 }
 
 export class MeResponseDto extends ApiSuccessResponseDto {

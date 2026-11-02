@@ -27,7 +27,7 @@
     },
     "/api/auth/register": {
       "post": {
-        "description": "Membuat akun Supabase baru (email langsung terkonfirmasi). Hanya menerima email @student.telkomuniversity.ac.id.",
+        "description": "Mendaftar akun baru dengan email @student.telkomuniversity.ac.id. Tautan verifikasi akan dikirimkan ke email tersebut dan harus dikonfirmasi sebelum login.",
         "operationId": "AuthController_register",
         "parameters": [],
         "requestBody": {
@@ -42,7 +42,7 @@
         },
         "responses": {
           "201": {
-            "description": "Registrasi berhasil",
+            "description": "Registrasi berhasil diproses. User perlu memeriksa email untuk verifikasi akun.",
             "content": {
               "application/json": {
                 "schema": {
@@ -52,7 +52,7 @@
             }
           },
           "400": {
-            "description": "Validasi body gagal atau ditolak oleh Supabase",
+            "description": "Validasi body gagal",
             "content": {
               "application/json": {
                 "schema": {
@@ -62,22 +62,40 @@
                   "validation": {
                     "summary": "Validasi body gagal",
                     "value": {
+                      "statusCode": 400,
                       "message": [
                         "Email harus menggunakan domain @student.telkomuniversity.ac.id",
-                        "Password minimal 6 karakter"
+                        "Password minimal 8 karakter"
                       ],
-                      "error": "Bad Request",
-                      "statusCode": 400
+                      "isError": true,
+                      "data": null
                     }
                   },
-                  "emailExists": {
-                    "summary": "Email sudah terdaftar (pesan dari Supabase)",
+                  "emailDomain": {
+                    "summary": "Domain email tidak valid",
                     "value": {
-                      "message": "A user with this email address has already been registered",
-                      "error": "Bad Request",
-                      "statusCode": 400
+                      "statusCode": 400,
+                      "message": "Email harus menggunakan domain @student.telkomuniversity.ac.id",
+                      "isError": true,
+                      "data": null
                     }
                   }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
@@ -91,7 +109,9 @@
                 },
                 "example": {
                   "statusCode": 500,
-                  "message": "Internal server error"
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
@@ -103,9 +123,106 @@
         ]
       }
     },
+    "/api/auth/resend-verification": {
+      "post": {
+        "description": "Mengirim ulang tautan verifikasi ke email mahasiswa. Respons selalu seragam terlepas dari email sudah terdaftar/terverifikasi atau belum untuk mencegah enumerasi akun.",
+        "operationId": "AuthController_resendVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permintaan kirim ulang email verifikasi diproses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResendVerificationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi body gagal atau bukan domain Telkom University",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Format email tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "email must be an email"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "emailDomain": {
+                    "summary": "Domain email tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "Email harus menggunakan domain @student.telkomuniversity.ac.id",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "summary": "Kirim ulang email verifikasi",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
-        "description": "Login dengan email & password. Gunakan `data.access_token` pada tombol Authorize untuk endpoint yang butuh autentikasi. Catatan: status HTTP yang dikirim 201 (default @Post), sedangkan field `statusCode` di body bernilai 200.",
+        "description": "Login dengan email & password. Gunakan `data.access_token` pada tombol Authorize untuk endpoint yang butuh autentikasi.",
         "operationId": "AuthController_login",
         "parameters": [],
         "requestBody": {
@@ -119,7 +236,7 @@
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "Login berhasil",
             "content": {
               "application/json": {
@@ -140,20 +257,22 @@
                   "validation": {
                     "summary": "Validasi body gagal",
                     "value": {
+                      "statusCode": 400,
                       "message": [
                         "email must be an email",
                         "password should not be empty"
                       ],
-                      "error": "Bad Request",
-                      "statusCode": 400
+                      "isError": true,
+                      "data": null
                     }
                   },
                   "emailDomain": {
                     "summary": "Domain email tidak valid",
                     "value": {
+                      "statusCode": 400,
                       "message": "Email harus menggunakan domain @student.telkomuniversity.ac.id",
-                      "error": "Bad Request",
-                      "statusCode": 400
+                      "isError": true,
+                      "data": null
                     }
                   }
                 }
@@ -161,16 +280,47 @@
             }
           },
           "401": {
-            "description": "Email atau password salah",
+            "description": "Kredensial tidak valid atau email belum diverifikasi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "invalidCredentials": {
+                    "summary": "Email atau password salah",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Email atau password salah",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "unconfirmedEmail": {
+                    "summary": "Email belum diverifikasi",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Email belum diverifikasi. Silakan periksa email Anda.",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiErrorResponseDto"
                 },
                 "example": {
-                  "message": "Invalid login credentials",
-                  "error": "Unauthorized",
-                  "statusCode": 401
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
@@ -184,13 +334,391 @@
                 },
                 "example": {
                   "statusCode": 500,
-                  "message": "Internal server error"
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
           }
         },
         "summary": "Login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "description": "Menukar refresh_token yang masih valid dengan access_token dan refresh_token baru.",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body request tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": [
+                    "refresh_token should not be empty"
+                  ],
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token tidak valid atau telah kedaluwarsa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Refresh token tidak valid atau telah kedaluwarsa",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "summary": "Perbarui access token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "Mengakhiri dan menginvalidasi sesi login user saat ini.",
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Logout berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Access token tidak ditemukan",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logout",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "description": "Mengirimkan tautan reset password ke email mahasiswa. Respons selalu seragam terlepas dari email terdaftar atau tidak untuk mencegah enumerasi akun.",
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permintaan reset password diproses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format email tidak valid atau bukan domain Telkom University",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Format email tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "email must be an email"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "emailDomain": {
+                    "summary": "Domain email tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "Email harus menggunakan domain @student.telkomuniversity.ac.id",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lupa password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "description": "Mengubah kata sandi user dengan menyertakan token pemulihan di header Authorization (Bearer <recovery_token>). Password baru minimal 8 karakter.",
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password berhasil diubah",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Password baru tidak memenuhi syarat minimal 8 karakter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": [
+                    "Password minimal 8 karakter"
+                  ],
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token pemulihan tidak valid atau tidak dikirim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Access token tidak valid",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reset password",
         "tags": [
           "Auth"
         ]
@@ -223,19 +751,37 @@
                   "missingToken": {
                     "summary": "Token tidak dikirim",
                     "value": {
+                      "statusCode": 401,
                       "message": "Access token tidak ditemukan",
-                      "error": "Unauthorized",
-                      "statusCode": 401
+                      "isError": true,
+                      "data": null
                     }
                   },
                   "invalidToken": {
                     "summary": "Token tidak valid / kedaluwarsa",
                     "value": {
+                      "statusCode": 401,
                       "message": "Access token tidak valid",
-                      "error": "Unauthorized",
-                      "statusCode": 401
+                      "isError": true,
+                      "data": null
                     }
                   }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
@@ -249,7 +795,9 @@
                 },
                 "example": {
                   "statusCode": 500,
-                  "message": "Internal server error"
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
                 }
               }
             }
@@ -306,14 +854,21 @@
             ],
             "example": "Pesan error"
           },
-          "error": {
-            "type": "string",
-            "example": "Bad Request"
+          "isError": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
           }
         },
         "required": [
           "statusCode",
-          "message"
+          "message",
+          "isError",
+          "data"
         ]
       },
       "RegisterDto": {
@@ -322,13 +877,12 @@
           "email": {
             "type": "string",
             "example": "mahasiswa@student.telkomuniversity.ac.id",
-            "description": "Harus berdomain @student.telkomuniversity.ac.id",
-            "pattern": "@student\\.telkomuniversity\\.ac\\.id$"
+            "description": "Harus berdomain @student.telkomuniversity.ac.id"
           },
           "password": {
             "type": "string",
             "example": "rahasia123",
-            "minLength": 6
+            "minLength": 8
           }
         },
         "required": [
@@ -378,7 +932,7 @@
           },
           "message": {
             "type": "string",
-            "example": "Registrasi berhasil"
+            "example": "Registrasi berhasil. Silakan periksa email Anda untuk verifikasi akun."
           },
           "isError": {
             "type": "boolean",
@@ -395,13 +949,54 @@
           "data"
         ]
       },
+      "ResendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "mahasiswa@student.telkomuniversity.ac.id",
+            "description": "Email mahasiswa yang didaftarkan (@student.telkomuniversity.ac.id)"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResendVerificationResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Jika email terdaftar, tautan verifikasi telah dikirim ulang. Silakan periksa inbox atau spam email Anda."
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
       "LoginDto": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string",
             "example": "mahasiswa@student.telkomuniversity.ac.id",
-            "description": "Harus berdomain @student.telkomuniversity.ac.id"
+            "description": "Email yang terdaftar"
           },
           "password": {
             "type": "string",
@@ -457,6 +1052,156 @@
           },
           "data": {
             "$ref": "#/components/schemas/LoginDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "example": "v1.MRjVxkF8sZ2...",
+            "description": "Refresh token yang didapat saat login atau refresh sebelumnya"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ]
+      },
+      "RefreshResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Token berhasil diperbarui"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/LoginDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "LogoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Logout berhasil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "mahasiswa@student.telkomuniversity.ac.id",
+            "description": "Email terdaftar yang ingin di-reset (@student.telkomuniversity.ac.id)"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ForgotPasswordResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Jika email terdaftar, tautan reset password telah dikirim ke email Anda."
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "example": "passwordBaru123",
+            "description": "Password baru minimal 8 karakter",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "ResetPasswordResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Password berhasil diubah"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
           }
         },
         "required": [

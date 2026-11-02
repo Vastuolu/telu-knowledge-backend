@@ -4,15 +4,19 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseService {
-  private client: SupabaseClient;
+  private readonly supabaseUrl: string;
+  private readonly supabaseAnonKey: string;
+  private readonly adminClient: SupabaseClient;
 
   constructor(private readonly configService: ConfigService) {
-    const supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.getOrThrow<string>(
+    this.supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
+    this.supabaseAnonKey =
+      this.configService.getOrThrow<string>('SUPABASE_ANON_KEY');
+    const serviceRoleKey = this.configService.getOrThrow<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
 
-    this.client = createClient(supabaseUrl, supabaseKey, {
+    this.adminClient = createClient(this.supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -20,7 +24,23 @@ export class SupabaseService {
     });
   }
 
+  getAdminClient(): SupabaseClient {
+    return this.adminClient;
+  }
+
+  createAuthClient(): SupabaseClient {
+    return createClient(this.supabaseUrl, this.supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  /**
+   * @deprecated Gunakan getAdminClient() untuk operasi admin atau createAuthClient() untuk autentikasi user.
+   */
   getClient(): SupabaseClient {
-    return this.client;
+    return this.getAdminClient();
   }
 }

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 // Schema dokumentasi untuk envelope ResponseHelper.success()
 export class ApiSuccessResponseDto {
@@ -12,7 +12,7 @@ export class ApiSuccessResponseDto {
   isError: boolean;
 }
 
-// Schema dokumentasi untuk error bawaan NestJS (HttpException / ValidationPipe)
+// Schema dokumentasi untuk error response yang konsisten via AllExceptionsFilter
 export class ApiErrorResponseDto {
   @ApiProperty({ example: 400 })
   statusCode: number;
@@ -23,11 +23,16 @@ export class ApiErrorResponseDto {
   })
   message: string | string[];
 
-  @ApiPropertyOptional({ example: 'Bad Request' })
-  error?: string;
+  @ApiProperty({ example: true })
+  isError: boolean;
+
+  @ApiProperty({ type: () => Object, nullable: true, example: null })
+  data: Record<string, never> | null;
 }
 
 export const INTERNAL_SERVER_ERROR_EXAMPLE = {
   statusCode: 500,
   message: 'Internal server error',
+  isError: true,
+  data: null,
 };
