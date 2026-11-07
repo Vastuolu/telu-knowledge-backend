@@ -159,3 +159,4 @@ GRANT SELECT ON TABLE public.profiles TO anon;
 
 GRANT ALL ON TABLE public.articles TO authenticated, service_role;
 GRANT SELECT ON TABLE public.articles TO anon;
+
