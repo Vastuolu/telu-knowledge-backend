@@ -29,11 +29,11 @@ Backend REST API untuk platform **TelU Knowledge** berbasis **NestJS v12**, **Ty
 
 | Layanan | Port Default | URL / Keterangan |
 |---|---|---|
-| **Backend API** | `8000` | `http://localhost:8000/api` |
-| **Swagger UI** | `8000` | `http://localhost:8000/api-docs` (Spesifikasi JSON: `/api-docs-json`) |
+| **Backend API** | `3002` | `http://localhost:3002/api` |
+| **Swagger UI** | `3002` | `http://localhost:3002/api-docs` (Spesifikasi JSON: `/api-docs-json`) |
 | **Frontend Web** | `3000` | `http://localhost:3000` (Next.js) |
 
-> **PENTING**: Backend berjalan pada port **8000** karena port **3000** dialokasikan khusus untuk frontend aplikasi web.
+> **PENTING**: Backend berjalan pada port **3002** karena port **3000** dialokasikan khusus untuk frontend aplikasi web.
 
 ---
 
@@ -47,16 +47,20 @@ $ cp .env.example .env
 
 | Variabel | Default | Deskripsi |
 |---|---|---|
-| `PORT` | `8000` | Port listen server backend. |
+| `PORT` | `3002` | Port listen server backend. |
 | `CORS_ORIGINS` | `http://localhost:3000` | Daftar origin frontend yang diizinkan (pisahkan dengan koma jika multi-origin). |
+| `TRUST_PROXY_HOPS` | `0` | Jumlah hop reverse proxy yang dipercaya Express (`app.set('trust proxy', n)` bila `> 0`) agar throttler membaca IP klien yang benar di belakang proxy. |
 | `API_BASE_URL` | *kosong* | Server URL di Swagger UI (tanpa `/api`). Kosongkan untuk memakai origin halaman saat ini. |
 | `ENABLE_SWAGGER` | *kosong* | `true`/`false` untuk memaksa Swagger nyala/mati. Default aktif kecuali `NODE_ENV=production`. |
 | `SUPABASE_URL` | - | URL project instance Supabase Anda (`https://<project-id>.supabase.co`). |
 | `SUPABASE_ANON_KEY` | - | Anon public API key Supabase (digunakan untuk alur user: register, login, refresh, lupa password). |
-| `SUPABASE_SERVICE_ROLE_KEY` | - | Service role secret key Supabase (hanya untuk operasi admin: reset password by ID, force revoke sesi). |
+| `SUPABASE_SERVICE_ROLE_KEY` | - | Service role secret key Supabase (hanya untuk operasi admin: reset password by ID, force revoke sesi, serta akses tabel/storage dari server). |
+| `SUPABASE_STORAGE_BUCKET` | `article-images` | Nama bucket Supabase Storage untuk menyimpan gambar artikel. |
 | `AUTH_EMAIL_REDIRECT_URL` | `http://localhost:3000/auth/callback` | URL pengalihan frontend setelah user mengklik tautan konfirmasi email. |
 | `AUTH_RESET_REDIRECT_URL` | `http://localhost:3000/reset-password` | URL pengalihan frontend setelah user mengklik tautan reset password di email. |
 | `ALLOWED_EMAIL_DOMAIN` | `@student.telkomuniversity.ac.id` | Domain email wajib untuk seluruh proses registrasi dan autentikasi. |
+| `GEMINI_API_KEY` | - | API key Google Gemini untuk fitur bantuan penulisan AI di Editor Studio. |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Model Google Gemini yang digunakan untuk bantuan AI di Editor Studio. |
 
 ---
 
@@ -78,6 +82,52 @@ Agar fitur autentikasi dan pengiriman email berjalan sempurna, lakukan langkah-l
    - Salin **Project URL** ke `SUPABASE_URL`.
    - Salin **Project API Keys (`anon` / `public`)** ke `SUPABASE_ANON_KEY`.
    - Salin **Project API Keys (`service_role` / `secret`)** ke `SUPABASE_SERVICE_ROLE_KEY`.
+4. **Setup Bucket Supabase Storage (`article-images`)**:
+   - Buka menu **Storage** di Supabase Dashboard, lalu klik **New bucket**.
+   - Isi nama bucket sesuai nilai `SUPABASE_STORAGE_BUCKET` (default: `article-images`).
+   - Aktifkan opsi **Public bucket** agar URL publik gambar artikel (`${SUPABASE_URL}/storage/v1/object/public/article-images/...`) dapat diakses dan ditampilkan langsung di peramban.
+   - Unggah objek dilakukan dari sisi server melalui `SUPABASE_SERVICE_ROLE_KEY` pada endpoint `POST /api/uploads/article-image` dengan validasi magic bytes (`png`, `jpeg`, `webp`, `gif`, maks. 4MB).
+
+---
+
+## Daftar Endpoint API
+
+Seluruh endpoint berada di bawah global prefix `/api` dan mengembalikan format envelope standar `{ statusCode, message, isError, data }`.
+
+### 1. Modul Auth (`/api/auth`)
+
+| Method | Path | Auth | Rate Limit | Deskripsi |
+|---|---|---|---|---|
+| `POST` | `/api/auth/register` | Publik | 5 / menit | Registrasi akun mahasiswa Tel-U (`@student.telkomuniversity.ac.id`). |
+| `POST` | `/api/auth/resend-verification` | Publik | 5 / menit | Kirim ulang email verifikasi pendaftaran. |
+| `POST` | `/api/auth/login` | Publik | 5 / menit | Login dengan email & password untuk mendapatkan `access_token` dan `refresh_token`. |
+| `POST` | `/api/auth/refresh` | Publik | 60 / menit (default) | Perbarui pasangan token menggunakan `refresh_token`. |
+| `POST` | `/api/auth/logout` | Bearer JWT | 60 / menit (default) | Mengakhiri sesi pengguna saat ini. |
+| `POST` | `/api/auth/forgot-password` | Publik | 5 / menit | Mengirimkan tautan pemulihan kata sandi ke email. |
+| `POST` | `/api/auth/reset-password` | Bearer Recovery Token | 5 / menit | Mengubah kata sandi baru menggunakan token pemulihan. |
+| `GET` | `/api/auth/me` | Bearer JWT | 60 / menit (default) | Mengambil profil autentikasi pengguna yang sedang login. |
+
+### 2. Modul Articles — Editor Studio (`/api/articles`)
+
+| Method | Path | Auth | Rate Limit | Deskripsi |
+|---|---|---|---|---|
+| `POST` | `/api/articles` | Bearer JWT | 60 / menit (default) | Membuat draft artikel baru (field body opsional; konten Tiptap divalidasi & disanitasi). |
+| `GET` | `/api/articles/me` | Bearer JWT | 60 / menit (default) | Daftar artikel milik sendiri (tanpa `content`), urut `updated_at DESC, id DESC`, mendukung filter `status=draft\|published`, `limit` (1–50, default 20), dan `cursor` (`base64("updatedAt\|id")`). |
+| `GET` | `/api/articles/:id` | Bearer JWT | 60 / menit (default) | Detail artikel beserta `author` (`{ id, displayName, avatarUrl }`). Pemilik dapat mengakses semua status; bukan pemilik hanya `published` (selain itu `404`). |
+| `PATCH` | `/api/articles/:id` | Bearer JWT | 120 / menit | Partial update / autosave artikel milik sendiri (menghitung ulang `excerpt` 160 karakter & `readingTimeMinutes`). |
+| `POST` | `/api/articles/:id/publish` | Bearer JWT | 60 / menit (default) | Mempublikasikan artikel milik sendiri secara idempoten (wajib memiliki `title` 1–150 karakter dan `content` berisi minimal satu teks non-kosong). |
+
+### 3. Modul Uploads (`/api/uploads`)
+
+| Method | Path | Auth | Rate Limit | Deskripsi |
+|---|---|---|---|---|
+| `POST` | `/api/uploads/article-image` | Bearer JWT | 20 / menit | Unggah gambar artikel (`multipart/form-data` field `file`, maks. 4MB, validasi magic bytes `png`/`jpeg`/`webp`/`gif`). Mengembalikan `{ url, path }`. |
+
+### 4. Modul AI (`/api/ai`)
+
+| Method | Path | Auth | Rate Limit | Deskripsi |
+|---|---|---|---|---|
+| `POST` | `/api/ai/assist` | Bearer JWT | 10 / menit (Throttler + per-user Map) | Bantuan penulisan AI (`Telu`) berbasis Google Gemini (`paraphrase`, `shorten`, `expand`, `fix_grammar`, `formal`, `casual`, `custom`) dengan timeout 20 detik. Mengembalikan `{ text }`. |
 
 ---
 
@@ -130,8 +180,8 @@ Jalankan server (`npm run start:dev`), lalu buka peramban:
 
 | URL | Isi |
 |---|---|
-| `http://localhost:8000/api-docs` | Swagger UI Interaktif |
-| `http://localhost:8000/api-docs-json` | Spesifikasi OpenAPI Resmi (JSON) |
+| `http://localhost:3002/api-docs` | Swagger UI Interaktif |
+| `http://localhost:3002/api-docs-json` | Spesifikasi OpenAPI Resmi (JSON) |
 
 Untuk mencoba endpoint terproteksi (ikon gembok):
 1. Eksekusi `POST /api/auth/login` lewat tombol **Try it out**.
@@ -156,7 +206,7 @@ Menghasilkan file `openapi.json` di root repository (berguna untuk code generati
    - Response sukses: `@ApiOkResponse` / `@ApiCreatedResponse` dengan `type: <ResponseDto>`.
    - Response error: `@ApiBadRequestResponse`, `@ApiUnauthorizedResponse`, `@ApiTooManyRequestsResponse`, dll. dengan `type: ApiErrorResponseDto` dan contoh `example` yang sesuai.
    - Guard: Endpoint dengan `@UseGuards(SupabaseAuthGuard)` **wajib** didekorasi `@ApiBearerAuth(BEARER_AUTH_NAME)`.
-4. Cek hasilnya di `http://localhost:8000/api-docs`. Contoh acuan lengkap tersedia di `src/auth/auth.controller.ts`.
+4. Cek hasilnya di `http://localhost:3002/api-docs`. Contoh acuan lengkap tersedia di `src/auth/auth.controller.ts`.
 
 ---
 

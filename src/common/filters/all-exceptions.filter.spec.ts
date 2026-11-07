@@ -3,6 +3,7 @@ import {
   ArgumentsHost,
   BadRequestException,
   UnauthorizedException,
+  PayloadTooLargeException,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -98,5 +99,19 @@ describe('AllExceptionsFilter', () => {
       data: null,
     });
     expect(loggerSpy).toHaveBeenCalled();
+  });
+
+  it('harus menerjemahkan pesan Multer "File too large" (413) ke Bahasa Indonesia', () => {
+    const exception = new PayloadTooLargeException('File too large');
+
+    filter.catch(exception, mockHost);
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(mockJson).toHaveBeenCalledWith({
+      statusCode: 413,
+      message: 'Ukuran file terlalu besar. Maksimal ukuran file adalah 4MB.',
+      isError: true,
+      data: null,
+    });
   });
 });
