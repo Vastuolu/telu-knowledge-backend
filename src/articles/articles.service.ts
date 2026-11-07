@@ -173,10 +173,13 @@ export class ArticlesService {
     articleId: string,
     dto: UpdateArticleDto,
   ) {
+    const ownershipSelect =
+      dto.content !== undefined ? ARTICLE_DETAIL_SELECT : 'id, author_id';
+
     const { data: existingData, error: findError } = await this.supabaseService
       .getAdminClient()
       .from('articles')
-      .select(ARTICLE_DETAIL_SELECT)
+      .select(ownershipSelect)
       .eq('id', articleId)
       .eq('author_id', userId)
       .maybeSingle();
@@ -185,27 +188,11 @@ export class ArticlesService {
       throw new NotFoundException('Artikel tidak ditemukan');
     }
 
-    const existing = existingData as unknown as ArticleRow;
-
     if (dto.coverImageUrl !== undefined) {
       this.contentValidator.validateCoverImageUrl(dto.coverImageUrl);
     }
 
-    const sanitizedContent: TiptapDoc | undefined =
-      dto.content !== undefined
-        ? this.contentValidator.validateAndSanitize(dto.content)
-        : undefined;
-
-    const effectiveContent = sanitizedContent ??
-      existing.content ?? { type: 'doc', content: [] };
-
-    const excerpt = this.contentValidator.computeExcerpt(effectiveContent);
-    const readingTimeMinutes =
-      this.contentValidator.computeReadingTimeMinutes(effectiveContent);
-
     const updatePayload: Record<string, unknown> = {
-      excerpt,
-      reading_time_minutes: readingTimeMinutes,
       updated_at: new Date().toISOString(),
     };
 
@@ -218,8 +205,15 @@ export class ArticlesService {
     if (dto.coverImageUrl !== undefined) {
       updatePayload.cover_image_url = dto.coverImageUrl;
     }
-    if (sanitizedContent !== undefined) {
+    if (dto.content !== undefined) {
+      const sanitizedContent = this.contentValidator.validateAndSanitize(
+        dto.content,
+      );
       updatePayload.content = sanitizedContent;
+      updatePayload.excerpt =
+        this.contentValidator.computeExcerpt(sanitizedContent);
+      updatePayload.reading_time_minutes =
+        this.contentValidator.computeReadingTimeMinutes(sanitizedContent);
     }
 
     const { data: updatedData, error: updateError } = await this.supabaseService

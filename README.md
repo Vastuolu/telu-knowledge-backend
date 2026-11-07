@@ -87,6 +87,9 @@ Agar fitur autentikasi dan pengiriman email berjalan sempurna, lakukan langkah-l
    - Isi nama bucket sesuai nilai `SUPABASE_STORAGE_BUCKET` (default: `article-images`).
    - Aktifkan opsi **Public bucket** agar URL publik gambar artikel (`${SUPABASE_URL}/storage/v1/object/public/article-images/...`) dapat diakses dan ditampilkan langsung di peramban.
    - Unggah objek dilakukan dari sisi server melalui `SUPABASE_SERVICE_ROLE_KEY` pada endpoint `POST /api/uploads/article-image` dengan validasi magic bytes (`png`, `jpeg`, `webp`, `gif`, maks. 4MB).
+5. **Setup Skema Database (PostgreSQL)**:
+   - Buka menu **SQL Editor** di Supabase Dashboard.
+   - Jalankan seluruh isi skema dari [`docs/db/001_profiles_articles.sql`](docs/db/001_profiles_articles.sql) untuk membuat tabel `profiles` dan `articles`, trigger sinkronisasi user auth ke profil, indeks query, serta kebijakan Row Level Security (RLS).
 
 ---
 

@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
@@ -27,7 +28,7 @@ const ACTION_PROMPTS: Record<Exclude<AiAction, 'custom'>, string> = {
   shorten:
     'Ringkas dan padatkan teks pada <selected_text> menjadi lebih singkat tanpa menghilangkan inti informasinya.',
   expand:
-    'Kembangkan danuraikan teks pada <selected_text> menjadi lebih detail dan informatif.',
+    'Kembangkan dan uraikan teks pada <selected_text> menjadi lebih detail dan informatif.',
   fix_grammar:
     'Perbaiki ejaan, tanda baca, dan tata bahasa pada <selected_text> agar baku dan tepat.',
   formal:
@@ -38,6 +39,7 @@ const ACTION_PROMPTS: Record<Exclude<AiAction, 'custom'>, string> = {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private readonly userRequests = new Map<string, number[]>();
 
   constructor(private readonly configService: ConfigService) {}
@@ -83,7 +85,7 @@ export class AiService {
         AI_TIMEOUT_MS,
       );
     } catch (error) {
-      throw this.mapProviderError(error);
+      throw this.mapProviderError(error, model);
     }
 
     const outputText = response?.text?.trim();
@@ -128,9 +130,18 @@ export class AiService {
   private enforceUserRateLimit(userId: string): void {
     const now = Date.now();
     const windowStart = now - USER_AI_RATE_WINDOW_MS;
-    const timestamps = (this.userRequests.get(userId) ?? []).filter(
-      (ts) => ts > windowStart,
-    );
+
+    // Bersihkan entri lama/kosong di Map rate limit per user agar hemat memori
+    for (const [key, reqs] of this.userRequests.entries()) {
+      const valid = reqs.filter((ts) => ts > windowStart);
+      if (valid.length === 0) {
+        this.userRequests.delete(key);
+      } else if (valid.length !== reqs.length) {
+        this.userRequests.set(key, valid);
+      }
+    }
+
+    const timestamps = this.userRequests.get(userId) ?? [];
 
     if (timestamps.length >= USER_AI_RATE_LIMIT) {
       this.userRequests.set(userId, timestamps);
@@ -196,7 +207,10 @@ export class AiService {
     }
   }
 
-  private mapProviderError(error: unknown): HttpException {
+  private mapProviderError(error: unknown, model: string): HttpException {
+    let errorCode: string | number = 'UNKNOWN';
+    let isRateLimited = false;
+
     if (error && typeof error === 'object') {
       const errObj = error as {
         status?: number;
@@ -205,6 +219,9 @@ export class AiService {
         message?: string;
       };
       const status = errObj.status ?? errObj.statusCode ?? errObj.code;
+      if (status !== undefined) {
+        errorCode = status;
+      }
       const msg = typeof errObj.message === 'string' ? errObj.message : '';
 
       if (
@@ -214,11 +231,19 @@ export class AiService {
         msg.includes('429') ||
         msg.includes('RESOURCE_EXHAUSTED')
       ) {
-        return new HttpException(
-          'Layanan AI sedang sibuk',
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
+        isRateLimited = true;
       }
+    }
+
+    // Logger HANYA mencatat status/kode error provider dan nama model.
+    // DILARANG mencatat isi teks, instruksi, atau API key.
+    this.logger.error(`AI provider error: model=${model}, code=${errorCode}`);
+
+    if (isRateLimited) {
+      return new HttpException(
+        'Layanan AI sedang sibuk',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     return new BadGatewayException(

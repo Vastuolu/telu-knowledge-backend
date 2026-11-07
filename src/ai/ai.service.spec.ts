@@ -156,5 +156,62 @@ describe('AiService', () => {
       expect(httpErr.message).not.toContain('AIzaSySecretKey');
     }
   });
+
+  it('harus menggunakan frasa "Kembangkan dan uraikan" pada prompt aksi expand', () => {
+    const prompt = service.buildPrompt({
+      action: 'expand',
+      selectedText: 'Contoh teks pendek.',
+    });
+    expect(prompt).toContain('Kembangkan dan uraikan');
+    expect(prompt).not.toContain('danuraikan');
+  });
+
+  it('harus mencatat logger HANYA model dan kode error provider saat error terjadi', async () => {
+    const loggerSpy = vi
+      .spyOn((service as unknown as { logger: { error: (...args: unknown[]) => void } }).logger, 'error')
+      .mockImplementation(() => {});
+
+    mockGenerateContent.mockRejectedValueOnce({
+      status: 403,
+      message: 'Sensitive prompt or key that must not be logged',
+    });
+
+    await expect(
+      service.assist(USER_1, {
+        action: 'shorten',
+        selectedText: 'Sensitive prompt text',
+      }),
+    ).rejects.toThrow(BadGatewayException);
+
+    expect(loggerSpy).toHaveBeenCalledTimes(1);
+    const logMessage = loggerSpy.mock.calls[0][0] as string;
+    expect(logMessage).toContain('model=gemini-2.5-flash');
+    expect(logMessage).toContain('code=403');
+    expect(logMessage).not.toContain('Sensitive prompt text');
+    expect(logMessage).not.toContain('Sensitive prompt or key');
+  });
+
+  it('harus membersihkan entri kosong di Map rate limit per user saat timestamps kedaluwarsa', async () => {
+    const userRequestsMap = (
+      service as unknown as { userRequests: Map<string, number[]> }
+    ).userRequests;
+
+    // Masukkan entri user lama yang sudah melewati window 60 detik
+    userRequestsMap.set('expired-user-1', [Date.now() - 100_000]);
+    userRequestsMap.set('expired-user-2', [Date.now() - 80_000]);
+
+    expect(userRequestsMap.has('expired-user-1')).toBe(true);
+    expect(userRequestsMap.has('expired-user-2')).toBe(true);
+
+    // Saat user aktif memanggil assist, map harus membersihkan entri yang sudah kadaluwarsa
+    await service.assist(USER_1, {
+      action: 'casual',
+      selectedText: 'Halo dunia.',
+    });
+
+    expect(userRequestsMap.has('expired-user-1')).toBe(false);
+    expect(userRequestsMap.has('expired-user-2')).toBe(false);
+    expect(userRequestsMap.has(USER_1)).toBe(true);
+  });
 });
 

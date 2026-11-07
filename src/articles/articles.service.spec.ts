@@ -220,6 +220,32 @@ describe('ArticlesService', () => {
       expect(res.data.excerpt.length).toBe(160);
       expect(res.data.readingTimeMinutes).toBe(2);
     });
+
+    it('tidak boleh memilih kolom content dan tidak menghitung ulang excerpt/readingTime jika content tidak dikirim', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: ARTICLE_ID, author_id: OWNER_ID },
+        error: null,
+      });
+
+      const updatedRow = createSampleRow({
+        title: 'Judul Baru Saja',
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedRow,
+        error: null,
+      });
+
+      const res = await service.updateArticle(OWNER_ID, ARTICLE_ID, {
+        title: 'Judul Baru Saja',
+      });
+
+      expect(mockQueryBuilder.select).toHaveBeenNthCalledWith(1, 'id, author_id');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        title: 'Judul Baru Saja',
+        updated_at: expect.any(String),
+      });
+      expect(res.data.title).toBe('Judul Baru Saja');
+    });
   });
 
   describe('POST /articles/:id/publish (validasi & idempotensi)', () => {
