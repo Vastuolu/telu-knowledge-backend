@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -324,6 +325,33 @@ export class ArticlesController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.articlesService.unpublishArticle(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Hapus artikel milik sendiri',
+    description:
+      'Menghapus artikel berdasarkan ID milik pengguna yang sedang login.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID artikel',
+    example: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+  })
+  @ApiOkResponse({
+    description: 'Artikel berhasil dihapus',
+  })
+  @ApiNotFoundResponse({
+    description: 'Artikel tidak ditemukan atau bukan milik pengguna',
+    type: ApiErrorResponseDto,
+    example: ARTICLE_NOT_FOUND_EXAMPLE,
+  })
+  deleteArticle(
+    @GetUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.articlesService.deleteArticle(user.id, id);
   }
 }
 
