@@ -42,6 +42,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         message = exception.message;
       }
+
+      if (
+        statusCode === HttpStatus.PAYLOAD_TOO_LARGE &&
+        typeof message === 'string' &&
+        message.toLowerCase() === 'file too large'
+      ) {
+        message = 'Ukuran file terlalu besar. Maksimal ukuran file adalah 4MB.';
+      }
     } else {
       this.logger.error(
         `Unhandled Exception on ${request.method} ${request.url}`,

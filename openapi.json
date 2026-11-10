@@ -813,6 +813,1022 @@
           "Auth"
         ]
       }
+    },
+    "/api/articles": {
+      "post": {
+        "description": "Membuat draft artikel baru di Editor Studio. Semua field pada body bersifat opsional.",
+        "operationId": "ArticlesController_createDraft",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArticleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft artikel berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateArticleResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi body atau struktur konten Tiptap gagal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Validasi field gagal",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "Judul artikel maksimal 150 karakter"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidContent": {
+                    "summary": "Node/mark konten Tiptap tidak diizinkan",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "Tipe node \"script\" tidak diizinkan dalam konten artikel",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buat draft artikel baru",
+        "tags": [
+          "Articles"
+        ]
+      }
+    },
+    "/api/articles/me": {
+      "get": {
+        "description": "Mengambil daftar artikel milik pengguna yang sedang login (tanpa field content) dengan urutan updated_at DESC, id DESC dan cursor pagination.",
+        "operationId": "ArticlesController_getMyArticles",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter status artikel milik sendiri",
+            "schema": {
+              "example": "draft",
+              "type": "string",
+              "enum": [
+                "draft",
+                "published"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Jumlah maksimum artikel per halaman (1-50, default 20)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Cursor pagination dalam format base64 dari \"updatedAt|id\"",
+            "schema": {
+              "example": "MjAyNi0xMS0wN1QxMzozMDowMC4wMDBafDU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMA==",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar artikel berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyArticlesListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parameter query atau cursor tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "invalidQuery": {
+                    "summary": "Filter status atau limit tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "Status harus bernilai draft atau published",
+                        "Limit maksimal 50"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidCursor": {
+                    "summary": "Cursor pagination tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "Cursor tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Daftar artikel milik sendiri",
+        "tags": [
+          "Articles"
+        ]
+      }
+    },
+    "/api/articles/{id}": {
+      "get": {
+        "description": "Pemilik artikel dapat melihat semua status (draft/published). Pengguna lain hanya dapat melihat artikel berstatus published; selain itu mengembalikan 404.",
+        "operationId": "ArticlesController_getArticleById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID artikel",
+            "schema": {
+              "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artikel berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format UUID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": "Validation failed (uuid is expected)",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artikel tidak ditemukan atau bukan milik pengguna (masih draft)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Artikel tidak ditemukan",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ambil detail artikel berdasarkan ID",
+        "tags": [
+          "Articles"
+        ]
+      },
+      "patch": {
+        "description": "Memperbarui sebagian field artikel milik sendiri dan menghitung ulang excerpt serta readingTimeMinutes dari content.",
+        "operationId": "ArticlesController_updateArticle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID artikel",
+            "schema": {
+              "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArticleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Artikel berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateArticleResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format UUID, field body, atau konten Tiptap tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": [
+                    "Judul artikel maksimal 150 karakter"
+                  ],
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artikel tidak ditemukan atau bukan milik pengguna",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Artikel tidak ditemukan",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perbarui artikel (autosave / partial update)",
+        "tags": [
+          "Articles"
+        ]
+      }
+    },
+    "/api/articles/{id}/publish": {
+      "post": {
+        "description": "Memvalidasi kelengkapan judul (1-150 karakter) dan konten (minimal satu teks non-kosong), mengubah status menjadi published, serta mengatur publishedAt dan slug secara idempoten.",
+        "operationId": "ArticlesController_publishArticle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID artikel",
+            "schema": {
+              "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artikel berhasil dipublikasikan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishArticleResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Syarat publikasi belum terpenuhi (judul/konten kosong)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": [
+                    "Judul artikel wajib diisi (minimal 1 karakter)",
+                    "Konten artikel wajib memiliki minimal satu teks yang tidak kosong"
+                  ],
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artikel tidak ditemukan atau bukan milik pengguna",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Artikel tidak ditemukan",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publikasikan artikel",
+        "tags": [
+          "Articles"
+        ]
+      }
+    },
+    "/api/uploads/article-image": {
+      "post": {
+        "description": "Mengunggah file gambar artikel (field `file`, maksimal 4MB). Tipe file divalidasi berdasarkan magic bytes isi file (hanya PNG, JPEG, WEBP, atau GIF; header Content-Type dari client tidak dipercaya).",
+        "operationId": "UploadsController_uploadArticleImage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Form data berisi file gambar pada field `file`",
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadArticleImageRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gambar artikel berhasil diunggah",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadArticleImageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "File tidak dikirim atau format isi file bukan gambar yang diizinkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingFile": {
+                    "summary": "File tidak dikirim",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "File gambar wajib diunggah pada field \"file\"",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidFileType": {
+                    "summary": "Tipe isi file tidak didukung",
+                    "value": {
+                      "statusCode": 400,
+                      "message": "Format file tidak didukung. Hanya gambar PNG, JPEG, WEBP, atau GIF yang diizinkan.",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Ukuran file melebihi batas maksimal 4MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 413,
+                  "message": "Ukuran file terlalu besar. Maksimal ukuran file adalah 4MB.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan (rate limit 20/menit terlampaui)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Terlalu banyak permintaan, silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unggah gambar untuk artikel",
+        "tags": [
+          "Uploads"
+        ]
+      }
+    },
+    "/api/ai/assist": {
+      "post": {
+        "description": "Mengolah teks terpilih menggunakan Google Gemini (parafrase, ringkas, kembangkan, perbaiki tata bahasa, ubah nada formal/santai, atau instruksi kustom). Dibatasi 10 permintaan/menit per pengguna dengan timeout 20 detik.",
+        "operationId": "AiController_assist",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAssistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bantuan AI berhasil diproses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAssistResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi body gagal (mis. instruction kosong saat action custom)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingCustomInstruction": {
+                    "summary": "Instruction kosong pada action custom",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "Instruksi wajib diisi untuk aksi custom"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidSelectedText": {
+                    "summary": "Panjang selectedText tidak valid",
+                    "value": {
+                      "statusCode": 400,
+                      "message": [
+                        "Teks terpilih minimal 1 karakter"
+                      ],
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak dikirim atau tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "missingToken": {
+                    "summary": "Token tidak dikirim",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak ditemukan",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "Token tidak valid / kedaluwarsa",
+                    "value": {
+                      "statusCode": 401,
+                      "message": "Access token tidak valid",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui (maksimal 10 permintaan/menit per pengguna) atau layanan AI sedang sibuk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "examples": {
+                  "userRateLimit": {
+                    "summary": "Rate limit pengguna terlampaui",
+                    "value": {
+                      "statusCode": 429,
+                      "message": "Batas penggunaan bantuan AI tercapai (maksimal 10 permintaan per menit)",
+                      "isError": true,
+                      "data": null
+                    }
+                  },
+                  "providerBusy": {
+                    "summary": "Provider AI sedang sibuk / kuota penuh",
+                    "value": {
+                      "statusCode": 429,
+                      "message": "Layanan AI sedang sibuk",
+                      "isError": true,
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan tak terduga di server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 500,
+                  "message": "Internal server error",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Kesalahan komunikasi atau timeout pada penyedia layanan AI",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                },
+                "example": {
+                  "statusCode": 502,
+                  "message": "Gagal memproses permintaan bantuan AI. Silakan coba beberapa saat lagi.",
+                  "isError": true,
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bantuan penulisan AI (Telu)",
+        "tags": [
+          "AI"
+        ]
+      }
     }
   },
   "info": {
@@ -822,7 +1838,11 @@
     "contact": {}
   },
   "tags": [],
-  "servers": [],
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -1228,6 +2248,590 @@
           },
           "data": {
             "$ref": "#/components/schemas/AuthUserDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "CreateArticleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Judul artikel (maksimal 150 karakter)",
+            "example": "Panduan Arsitektur Microservices dengan NestJS",
+            "maxLength": 150
+          },
+          "subtitle": {
+            "type": "object",
+            "description": "Subjudul atau ringkasan singkat artikel (maksimal 300 karakter)",
+            "example": "Memahami pola komunikasi antar layanan di lingkungan kampus.",
+            "maxLength": 300,
+            "nullable": true
+          },
+          "coverImageUrl": {
+            "type": "object",
+            "description": "URL publik gambar sampul dari bucket Supabase Storage yang diizinkan",
+            "example": "https://your-project.supabase.co/storage/v1/object/public/article-images/covers/sample.png",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "description": "Konten artikel dalam format JSON Tiptap ({ type: \"doc\", content: [...] })",
+            "additionalProperties": true,
+            "example": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Paragraf pembuka artikel."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ArticleAuthorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Budi Santoso"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://your-project.supabase.co/storage/v1/object/public/avatars/budi.png"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "avatarUrl"
+        ]
+      },
+      "ArticleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "title": {
+            "type": "string",
+            "example": "Panduan Arsitektur Microservices dengan NestJS"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "example": "Memahami pola komunikasi antar layanan di lingkungan kampus."
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://your-project.supabase.co/storage/v1/object/public/article-images/covers/sample.png"
+          },
+          "excerpt": {
+            "type": "string",
+            "example": "Paragraf pembuka artikel yang menjelaskan arsitektur layanan..."
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "example": 3
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "example": "draft"
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true,
+            "example": "panduan-arsitektur-microservices-dengan-nestjs-a1b2c3d4"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-11-07T13:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-11-07T13:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "author": {
+            "$ref": "#/components/schemas/ArticleAuthorDto"
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Paragraf pembuka artikel."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle",
+          "coverImageUrl",
+          "excerpt",
+          "readingTimeMinutes",
+          "status",
+          "slug",
+          "createdAt",
+          "updatedAt",
+          "publishedAt",
+          "author",
+          "content"
+        ]
+      },
+      "CreateArticleResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 201
+          },
+          "message": {
+            "type": "string",
+            "example": "Draft artikel berhasil dibuat"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/ArticleDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "ArticleSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "title": {
+            "type": "string",
+            "example": "Panduan Arsitektur Microservices dengan NestJS"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "example": "Memahami pola komunikasi antar layanan di lingkungan kampus."
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://your-project.supabase.co/storage/v1/object/public/article-images/covers/sample.png"
+          },
+          "excerpt": {
+            "type": "string",
+            "example": "Paragraf pembuka artikel yang menjelaskan arsitektur layanan..."
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "example": 3
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "example": "draft"
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true,
+            "example": "panduan-arsitektur-microservices-dengan-nestjs-a1b2c3d4"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-11-07T13:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-11-07T13:30:00.000Z"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "author": {
+            "$ref": "#/components/schemas/ArticleAuthorDto"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle",
+          "coverImageUrl",
+          "excerpt",
+          "readingTimeMinutes",
+          "status",
+          "slug",
+          "createdAt",
+          "updatedAt",
+          "publishedAt",
+          "author"
+        ]
+      },
+      "MyArticlesListDataDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArticleSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "example": "MjAyNi0xMS0wN1QxMzozMDowMC4wMDBafDdjOWU2Njc5LTc0MjUtNDBkZS05NDRiLWUwN2ZjMWY5MGFlNw=="
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "MyArticlesListResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Daftar artikel berhasil diambil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/MyArticlesListDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "ArticleDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Artikel berhasil diambil"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/ArticleDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "UpdateArticleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Judul artikel (maksimal 150 karakter)",
+            "example": "Panduan Arsitektur Microservices dengan NestJS (Revisi)",
+            "maxLength": 150
+          },
+          "subtitle": {
+            "type": "object",
+            "description": "Subjudul atau ringkasan singkat artikel (maksimal 300 karakter)",
+            "example": "Memahami pola komunikasi antar layanan di lingkungan kampus.",
+            "maxLength": 300,
+            "nullable": true
+          },
+          "coverImageUrl": {
+            "type": "object",
+            "description": "URL publik gambar sampul dari bucket Supabase Storage yang diizinkan",
+            "example": "https://your-project.supabase.co/storage/v1/object/public/article-images/covers/sample.png",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "description": "Konten artikel dalam format JSON Tiptap ({ type: \"doc\", content: [...] })",
+            "additionalProperties": true,
+            "example": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Pendahuluan"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Isi artikel yang telah diperbarui."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "UpdateArticleResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Artikel berhasil diperbarui"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/ArticleDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "PublishArticleResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Artikel berhasil dipublikasikan"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/ArticleDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "UploadArticleImageRequestDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "File gambar artikel (hanya PNG, JPEG, WEBP, atau GIF; maksimal 4MB)"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "UploadedArticleImageDataDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public URL gambar yang telah diunggah ke Supabase Storage",
+            "example": "https://your-project.supabase.co/storage/v1/object/public/article-images/550e8400-e29b-41d4-a716-446655440000/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.png"
+          },
+          "path": {
+            "type": "string",
+            "description": "Path objek di dalam bucket Supabase Storage (${userId}/${uuid}.${ext})",
+            "example": "550e8400-e29b-41d4-a716-446655440000/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.png"
+          }
+        },
+        "required": [
+          "url",
+          "path"
+        ]
+      },
+      "UploadArticleImageResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 201
+          },
+          "message": {
+            "type": "string",
+            "example": "Gambar artikel berhasil diunggah"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/UploadedArticleImageDataDto"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "isError",
+          "data"
+        ]
+      },
+      "AiAssistDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Jenis aksi bantuan penulisan AI",
+            "enum": [
+              "paraphrase",
+              "shorten",
+              "expand",
+              "fix_grammar",
+              "formal",
+              "casual",
+              "custom"
+            ],
+            "example": "paraphrase"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "Instruksi khusus (wajib diisi apabila action bernilai \"custom\", maksimal 500 karakter)",
+            "maxLength": 500,
+            "example": "Ubahlah menjadi nada akademik yang cocok untuk jurnal ilmiah."
+          },
+          "selectedText": {
+            "type": "string",
+            "description": "Teks yang dipilih untuk diolah oleh AI (1-4000 karakter)",
+            "minLength": 1,
+            "maxLength": 4000,
+            "example": "Sistem microservices membagi aplikasi monolitik menjadi layanan-layanan kecil yang independen."
+          },
+          "contextBefore": {
+            "type": "string",
+            "description": "Konteks teks sebelum bagian yang dipilih (maksimal 1000 karakter)",
+            "maxLength": 1000,
+            "example": "Pada bab sebelumnya telah dibahas arsitektur monolitik."
+          },
+          "contextAfter": {
+            "type": "string",
+            "description": "Konteks teks sesudah bagian yang dipilih (maksimal 1000 karakter)",
+            "maxLength": 1000,
+            "example": "Setiap layanan berkomunikasi melalui protokol HTTP atau message broker."
+          }
+        },
+        "required": [
+          "action",
+          "selectedText"
+        ]
+      },
+      "AiAssistDataDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Teks hasil olahan asisten AI Telu",
+            "example": "Arsitektur microservices memecah aplikasi monolitik menjadi sejumlah layanan mandiri berskala kecil."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "AiAssistResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Bantuan AI berhasil diproses"
+          },
+          "isError": {
+            "type": "boolean",
+            "example": false
+          },
+          "data": {
+            "$ref": "#/components/schemas/AiAssistDataDto"
           }
         },
         "required": [
