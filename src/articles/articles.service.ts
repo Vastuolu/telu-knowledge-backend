@@ -350,6 +350,33 @@ export class ArticlesService {
     );
   }
 
+  async deleteArticle(userId: string, articleId: string) {
+    const { data: existingData, error: findError } = await this.supabaseService
+      .getAdminClient()
+      .from('articles')
+      .select('id, author_id')
+      .eq('id', articleId)
+      .eq('author_id', userId)
+      .maybeSingle();
+
+    if (findError || !existingData) {
+      throw new NotFoundException('Artikel tidak ditemukan');
+    }
+
+    const { error: deleteError } = await this.supabaseService
+      .getAdminClient()
+      .from('articles')
+      .delete()
+      .eq('id', articleId)
+      .eq('author_id', userId);
+
+    if (deleteError) {
+      throw new InternalServerErrorException('Gagal menghapus artikel');
+    }
+
+    return ResponseHelper.success(200, 'Artikel berhasil dihapus', null);
+  }
+
   encodeCursor(updatedAt: string, id: string): string {
     return Buffer.from(`${updatedAt}|${id}`, 'utf8').toString('base64');
   }
