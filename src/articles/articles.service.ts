@@ -310,6 +310,46 @@ export class ArticlesService {
     );
   }
 
+  async unpublishArticle(userId: string, articleId: string) {
+    const { data: existingData, error: findError } = await this.supabaseService
+      .getAdminClient()
+      .from('articles')
+      .select('id, author_id')
+      .eq('id', articleId)
+      .eq('author_id', userId)
+      .maybeSingle();
+
+    if (findError || !existingData) {
+      throw new NotFoundException('Artikel tidak ditemukan');
+    }
+
+    const now = new Date().toISOString();
+
+    const { data: updatedData, error: updateError } = await this.supabaseService
+      .getAdminClient()
+      .from('articles')
+      .update({
+        status: 'draft',
+        updated_at: now,
+      })
+      .eq('id', articleId)
+      .eq('author_id', userId)
+      .select(ARTICLE_DETAIL_SELECT)
+      .single();
+
+    if (updateError || !updatedData) {
+      throw new InternalServerErrorException(
+        'Gagal membatalkan publikasi artikel',
+      );
+    }
+
+    return ResponseHelper.success(
+      200,
+      'Publikasi artikel berhasil dibatalkan',
+      this.mapToArticleDto(updatedData as unknown as ArticleRow),
+    );
+  }
+
   encodeCursor(updatedAt: string, id: string): string {
     return Buffer.from(`${updatedAt}|${id}`, 'utf8').toString('base64');
   }
